@@ -644,7 +644,7 @@ class DAME_Coupling(nn.Module):
 
     def __init__(self, groups=REGION_GROUPS, D=D_MODEL, use_coupling=True,
                  use_water=True, use_reflux=True, use_mutual=True, use_pred=True,
-                 plv_adj=None, aux_losses=True):
+                 plv_adj=None, aux_losses=True, society="mutual"):
         super().__init__()
         self.groups = groups
         self.R = len(groups)
@@ -652,6 +652,9 @@ class DAME_Coupling(nn.Module):
         self.use_water = use_water
         self.use_reflux = use_reflux and use_water
         self.use_mutual = use_mutual
+        # P6 (2026-08-17): society="personality" → 异构社会 (VI-H, 默认经 --society);
+        # "mutual" = 原同构社会, 复现论文表 3-5 用. 两臂其余结构逐字一致
+        self.society = society
         # 公平性消融: aux_losses=False → 仅CE训练 (完整架构, 无辅助损失;
         # 回答"精度来自架构还是多损失正则"的审稿质疑, 2026-08-16)
         self.aux_losses = aux_losses
@@ -664,8 +667,14 @@ class DAME_Coupling(nn.Module):
         # 无水循环时把A投影到K维本征 (预测头输入维度统一)
         self.z_to_k = nn.Linear(D, K_LATENT) if (not use_water and use_pred) else None
         if use_mutual:
-            self.mutual = MutualSocietyV3(N=self.R, D=D, d_mem=D_MEM,
-                                          n_communities=4, plv_adj=plv_adj)
+            if society == "personality":
+                # 惰性导入: v6 文件顶层 import 本文件, 循环导入只在运行期断开
+                from eeg_v6_personality_society import PersonalitySocietyV1
+                self.mutual = PersonalitySocietyV1(N=self.R, D=D, d_mem=D_MEM,
+                                                   n_communities=4, plv_adj=plv_adj)
+            else:
+                self.mutual = MutualSocietyV3(N=self.R, D=D, d_mem=D_MEM,
+                                              n_communities=4, plv_adj=plv_adj)
             self.mutual._bind_pair_indices(self.coupling.pair_i, self.coupling.pair_j)
         else:
             self.mutual = None
@@ -695,7 +704,10 @@ class DAME_Coupling(nn.Module):
         self._current_epoch = epoch
         if self.use_mutual:
             progress = min(1.0, epoch / max(TEMP_ANNEAL_EPOCHS, 1))
-            self.mutual.set_temp(TEMP_INIT + (TEMP_FINAL - TEMP_INIT) * progress)
+            if self.society == "personality":
+                self.mutual.set_temp(progress)   # 族内门温曲线自带高低区间
+            else:
+                self.mutual.set_temp(TEMP_INIT + (TEMP_FINAL - TEMP_INIT) * progress)
             if epoch >= 3:
                 self.mutual.reassign_communities()
 
@@ -716,7 +728,11 @@ class DAME_Coupling(nn.Module):
             reflux_mag = torch.tensor(0.0, device=X.device)
 
         if self.use_mutual:
-            O, gates, share_mask, kl_mod, omega = self.mutual(plv)
+            if self.society == "personality":
+                # 异构社会吃双视图: plv (边族/慢变族) + 功率 (功率族)
+                O, gates, share_mask, kl_mod, omega = self.mutual(plv, H_pow_pooled)
+            else:
+                O, gates, share_mask, kl_mod, omega = self.mutual(plv)
             w_soc = F.softmax(self.proj_w(O), dim=-1)      # (B, n_terms) 社会策略调制
         else:
             O = torch.zeros_like(A)
@@ -1253,7 +1269,8 @@ def loso_v5(model_factory, X, y, subj, pair_idx, seeds, epochs=EPOCHS,
     for seed in seeds:
         torch.manual_seed(seed); np.random.seed(seed); random.seed(seed)
         for s in range(Ns):
-            key = f"{tag}_{kind}_s{s}_seed{seed}"
+            key = (f"{tag}_{kind}_s{s}_seed{seed}"
+                   + ("_pers" if SOCIETY == "personality" else ""))
             if done_folds and key in done_folds:
                 print(f"  [skip] {key} (done)")
                 continue
@@ -1363,7 +1380,8 @@ def session_run_v5(model_factory, X, y, subj, wid, pair_idx, seeds, epochs=EPOCH
     per_seed = {}
     for seed in seeds:
         torch.manual_seed(seed); np.random.seed(seed); random.seed(seed)
-        key = f"{tag}_{kind}_sess{sess_name}_seed{seed}"
+        key = (f"{tag}_{kind}_sess{sess_name}_seed{seed}"
+               + ("_pers" if SOCIETY == "personality" else ""))
         if done_folds and key in done_folds:
             print(f"  [skip] {key} (done)")
             continue
@@ -1438,9 +1456,16 @@ def session_run_v5(model_factory, X, y, subj, wid, pair_idx, seeds, epochs=EPOCH
 # =========================================================================
 # 12. Model registry
 # =========================================================================
+# 社会模块选择: "personality" = P6 异构社会 (VI-H, 预注册"明显赢"臂), 默认;
+# "mutual" = 原同构社会, 论文表 3-5 的数字来源. main() 按 --society 覆盖.
+# 注意: v6 文件 (eeg_v6_personality_society.py) 运行时本值保持 "mutual",
+# 其两臂由 v6 自己的 main 显式构建, 不走本注册表
+SOCIETY = "mutual"
+
+
 def make_variant(**kw):
     def _f(plv_adj=None):
-        return DAME_Coupling(plv_adj=plv_adj, **kw)
+        return DAME_Coupling(plv_adj=plv_adj, society=SOCIETY, **kw)
     return _f
 
 DAME_ARMS = ["DAME-C5", "C5-NoPred", "C5-NoPredNoMutual", "C5-NoMutual",
@@ -1492,6 +1517,10 @@ def main():
                     help="种子起点索引 (0=42, 1=123, 2=789; 配合--seeds 1 重跑特定种子)")
     ap.add_argument("--field-router", action="store_true",
                     help="启用场域路由器 (默认关闭 — 三判决门证伪后退役, 仅复现实验用)")
+    ap.add_argument("--society", type=str, default="personality",
+                    choices=["mutual", "personality"],
+                    help="社会模块: personality=P6 异构社会 (VI-H, 默认); "
+                         "mutual=原同构社会, 复现论文表 3-5 用")
     ap.add_argument("--epochs", type=int, default=EPOCHS)
     ap.add_argument("--models", type=str, default=None)
     ap.add_argument("--tag", type=str, default="v5")
@@ -1523,6 +1552,12 @@ def main():
         global FIELD_ROUTER
         FIELD_ROUTER = True
         print("[ROUTER ON] 场域路由器启用 (证伪/复现实验)")
+
+    global SOCIETY
+    SOCIETY = args.society
+    if SOCIETY == "personality":
+        print("[SOCIETY] 异构社会 PersonalitySocietyV1 (VI-H); "
+              "缓存键带 _pers 后缀; 复现论文表 3-5 用 --society mutual")
 
     st = se = None
     if args.session_split:

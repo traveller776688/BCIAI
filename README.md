@@ -17,10 +17,13 @@ SEED-IV 原始波形上的直接迁移脑电情绪解码。主线成果是 DAME 
 `eeg_v5_coupling_experiment.py` 中的数据加载段。
 
 ```bash
-# DAME 主线 LOSO 消融
+# DAME 主线 LOSO 消融（默认社会 = P6 异构社会，VI-H；缓存键带 _pers 后缀）
 python eeg_v5_coupling_experiment.py --fast 8
 
-# 性格异构社会（论文 VI-H）：跨会话 / 跨被试
+# 复现论文表 3-5（原同构社会 MutualSocietyV3）
+python eeg_v5_coupling_experiment.py --fast 8 --society mutual
+
+# 性格异构社会（论文 VI-H）：跨会话 / 跨被试 两臂对照
 python eeg_v6_personality_society.py --fast 8 --session-split --seeds 3
 python eeg_v6_personality_society.py --fast 8 --seeds 3
 ```

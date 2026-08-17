@@ -426,6 +426,8 @@ Self and Stab are historical records only: the fused prediction head was falsifi
 
 Two infrastructure issues were diagnosed during iteration: (i) a GPU driver TDR hang reproduced only on TSception's Conv2d(48,48,(62,1)) layer, replaced by a numerically equivalent einsum implementation (max abs diff 4.9e-4); (ii) a one-shot watchdog that killed healthy runs at second 600, replaced by a per-epoch re-armed heartbeat. Neither affects the reported numbers; all baseline runs completed after the fixes.
 
+Code and reproducibility materials are publicly available at https://github.com/traveller776688/BCIAI (the main pipeline `eeg_v5_coupling_experiment.py`, the personality-heterogeneous society experiment of Section VI-H `eeg_v6_personality_society.py`, the Chinese and English paper sources, and all figures). The main pipeline defaults to the heterogeneous society of Section VI-H (`--society personality`); the homogeneous-society configuration behind Tables 3–5 is reproduced with `--society mutual` (the two configurations use isolated cache keys).
+
 # APPENDIX C: Mutual-Society Details
 
 Twelve experts, one per region; each keeps a 32-dim GRU memory. Gates: softmax over expert scores, temperature-annealed 0.8 → 3.5 over eight epochs; scores conditioned on the distilled essence and the pooled coupling context, with coupling strength participating directly. Adjacency W_mutual initialized from the training-fold PLV mean matrix, L1-normalized. Losses: orthogonality (embeddings), mutual agreement, specialization (each expert owns output-space regions), gate entropy, all at weight 1e-3. Community detection: thresholded co-activation graph per fold; the modal community is present in only 2 of 8 folds (Section VI-F), so communities are a monitor, not a finding.
