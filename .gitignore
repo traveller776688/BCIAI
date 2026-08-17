@@ -9,3 +9,4 @@ results/eeg_v6p_results_smoke.json
 *.docx
 .DS_Store
 SEED_IV/
+DREAMER.mat
