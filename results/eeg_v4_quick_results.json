@@ -1,0 +1,18 @@
+{
+  "DAME-Region_dame_s0_seed42": 0.27358490228652954,
+  "DAME-Region_dame_s1_seed42": 0.27358490228652954,
+  "DAME-Region_dame_s2_seed42": 0.28130361437797546,
+  "SUMMARY_DAME-Region": {
+    "DAME-Region_dame_s0_seed42": 0.27358490228652954,
+    "DAME-Region_dame_s1_seed42": 0.27358490228652954,
+    "DAME-Region_dame_s2_seed42": 0.28130361437797546
+  },
+  "EEGNet_plain_s0_seed42": 0.2384219616651535,
+  "EEGNet_plain_s1_seed42": 0.24442538619041443,
+  "EEGNet_plain_s2_seed42": 0.24957118928432465,
+  "SUMMARY_EEGNet": {
+    "EEGNet_plain_s0_seed42": 0.2384219616651535,
+    "EEGNet_plain_s1_seed42": 0.24442538619041443,
+    "EEGNet_plain_s2_seed42": 0.24957118928432465
+  }
+}

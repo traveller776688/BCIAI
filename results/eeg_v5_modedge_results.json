@@ -1,0 +1,20 @@
+{
+  "C5-NoPred_dame_s0_seed42": 0.33018869161605835,
+  "C5-NoPred_dame_s1_seed42": 0.3156089186668396,
+  "C5-NoPred_dame_s2_seed42": 0.24785591661930084,
+  "C5-NoPred_dame_s3_seed42": 0.38336193561553955,
+  "C5-NoPred_dame_s4_seed42": 0.2830188572406769,
+  "C5-NoPred_dame_s5_seed42": 0.2692967355251312,
+  "C5-NoPredNoMutual_dame_s0_seed42": 0.343910813331604,
+  "C5-NoPredNoMutual_dame_s1_seed42": 0.312178373336792,
+  "C5-NoPredNoMutual_dame_s2_seed42": 0.2667238414287567,
+  "C5-NoPredNoMutual_dame_s3_seed42": 0.41080617904663086,
+  "C5-NoPredNoMutual_dame_s4_seed42": 0.33361920714378357,
+  "C5-NoPredNoMutual_dame_s5_seed42": 0.27358490228652954,
+  "C5-Base_dame_s0_seed42": 0.3456260859966278,
+  "C5-Base_dame_s1_seed42": 0.30102914571762085,
+  "C5-Base_dame_s2_seed42": 0.25385934114456177,
+  "C5-Base_dame_s3_seed42": 0.3430531620979309,
+  "C5-Base_dame_s4_seed42": 0.32504287362098694,
+  "C5-Base_dame_s5_seed42": 0.2847341299057007
+}

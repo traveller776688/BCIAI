@@ -1,0 +1,119 @@
+/* Journal-style print stylesheet for DAME papers (EN/CN) */
+@page {
+  size: A4;
+  margin: 2.2cm 2.4cm;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Georgia, "Times New Roman", "Nimbus Roman", "Songti SC", "STSong", SimSun, serif;
+  font-size: 10.5pt;
+  line-height: 1.6;
+  text-align: justify;
+  color: #111;
+}
+
+h1.title {
+  font-size: 16pt;
+  text-align: center;
+  line-height: 1.35;
+  margin: 0 0 0.4em 0;
+}
+
+p.author, p.date {
+  text-align: center;
+  margin: 0.15em 0;
+  font-size: 11pt;
+}
+
+p.author {
+  font-weight: bold;
+}
+
+/* abstract/keywords block (the first section in the paper) */
+section#abstract h2, section#摘要 h2 {
+  border-bottom: 1px solid #999;
+}
+
+h2 {
+  font-size: 11.5pt;
+  margin: 1.1em 0 0.45em 0;
+  page-break-after: avoid;
+}
+
+h3 {
+  font-size: 10.5pt;
+  margin: 0.9em 0 0.35em 0;
+  page-break-after: avoid;
+}
+
+p {
+  margin: 0 0 0.55em 0;
+  orphans: 3;
+  widows: 3;
+}
+
+/* displayed math */
+div.displaymath, span.math.display, .math.display {
+  text-align: center;
+  margin: 0.7em 0;
+  page-break-inside: avoid;
+}
+
+table {
+  border-collapse: collapse;
+  font-size: 9pt;
+  margin: 0.7em auto;
+  page-break-inside: avoid;
+}
+
+th, td {
+  border: 0.6pt solid #444;
+  padding: 3px 7px;
+  text-align: center;
+}
+
+th {
+  background: #f2f2f2;
+  font-weight: bold;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.8em auto 0.2em auto;
+  page-break-inside: avoid;
+}
+
+figure {
+  margin: 0.9em 0;
+  page-break-inside: avoid;
+  text-align: center;
+}
+
+figcaption {
+  font-size: 9pt;
+  text-align: center;
+  margin: 0.2em 0 0.6em 0;
+}
+
+/* emphasis of verdicts etc. kept from markdown */
+strong { font-weight: bold; }
+em { font-style: italic; }
+
+/* reference list */
+h2#references + ol, h2#参考文献 + ol {
+  font-size: 9pt;
+  padding-left: 1.6em;
+}
+h2#references + ol li, h2#参考文献 + ol li {
+  margin-bottom: 0.35em;
+}
+
+/* section page breaks for major parts */
+h2#i-introduction, h2#i-引言 { page-break-before: auto; }

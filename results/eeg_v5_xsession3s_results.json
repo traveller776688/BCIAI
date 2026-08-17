@@ -1,0 +1,11 @@
+{
+  "C5-NoPred_dame_sess3_seed42": 0.341207355260849,
+  "C5-NoPred_dame_sess3_seed123": 0.31146106123924255,
+  "C5-NoPred_dame_sess3_seed789": 0.3285214304924011,
+  "C5-NoPredNoMutual_dame_sess3_seed42": 0.3206474184989929,
+  "C5-NoPredNoMutual_dame_sess3_seed123": 0.2979002594947815,
+  "C5-NoPredNoMutual_dame_sess3_seed789": 0.3368329107761383,
+  "C5-Base_dame_sess3_seed42": 0.30752405524253845,
+  "C5-Base_dame_sess3_seed123": 0.284776896238327,
+  "C5-Base_dame_sess3_seed789": 0.3053368330001831
+}

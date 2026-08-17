@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.log
+*.npz
+results/diag/
+results/diag_v5/
+results/eeg_v6p_results_smoke.json
+*.html
+*.docx
+.DS_Store
+SEED_IV/
