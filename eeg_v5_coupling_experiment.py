@@ -972,10 +972,99 @@ class DeepCORAL_Raw(nn.Module):
 # =========================================================================
 # 8. Data loader — raw windows + prediction pairs (w_k ↔ w_{k+2})
 # =========================================================================
+CLEAN_CACHE_DIR = os.path.join(RESULTS_DIR, "artifact_clean_cache")
+CLEAN_VER = "cleanv1"   # 清洗参数版本戳: 1-50Hz firwin + decim4 + ICA30(fastica,
+                        # 会话1拟合) + ICLabel(argmax≠brain 且置信≥0.5) + EOG相关兜底
+
+def _clean_montage():
+    """standard_1020 大写匹配后只缺 CB1/CB2 → 取 Oz 位置微偏补丁 (mne-icalabel 需要)."""
+    import mne as _mne
+    mont = _mne.channels.make_standard_montage("standard_1020")
+    ch_pos = dict(mont.get_positions()["ch_pos"])
+    oz = ch_pos["Oz"]
+    ch_pos["CB1"] = oz + np.array([-0.01, -0.015, 0.0])
+    ch_pos["CB2"] = oz + np.array([0.01, 0.015, 0.0])
+    return _mne.channels.make_dig_montage(ch_pos=ch_pos, coord_frame="head")
+
+
+def clean_subject_trials(subj_id, trials_800):
+    """SOTA 清洗 (与 artifact_audit_fast.py 同管道, 2026-08-20 审计版):
+    800Hz → 1-50Hz 带通 (firwin) → decimate(4)→200Hz → ICA(fastica, 会话1拟合,
+    decim=3) → ICLabel 剔除 (argmax≠brain 且置信≥0.5, 第三轮教训: 裸 argmax 会
+    删 20+/30 组件=过度清洗) → 应用到全部 trial。ICLabel 失败回退 EOG 相关启发式;
+    ICA 整个失败回退"仅带通"(如实标注, 不写缓存)。
+    结果缓存 results/artifact_clean_cache/cleanv1_s{id}.npz — 全量 15×3 多臂重跑
+    不必重复拟合 ICA。"""
+    import mne
+    os.makedirs(CLEAN_CACHE_DIR, exist_ok=True)
+    cache_path = os.path.join(CLEAN_CACHE_DIR, f"{CLEAN_VER}_s{subj_id}.npz")
+    info_path = cache_path[:-4] + "_info.json"
+    if os.path.exists(cache_path) and os.path.exists(info_path):
+        z = np.load(cache_path, allow_pickle=False)
+        info = json.load(open(info_path, encoding="utf-8"))
+        return [z[f"t{i}"].astype(np.float32) for i in range(len(z.files))], info
+
+    tr200 = []                                            # 带通 + 降采样 (与主代码同 decimate)
+    for tr in trials_800:
+        raw = mne.io.RawArray(tr, mne.create_info(CH_ORDER, 800, "eeg"))
+        raw.filter(1.0, 50.0, fir_design="firwin", verbose=False)
+        tr200.append(decimate(raw.get_data(), 4, axis=1))
+    s1_cat = np.concatenate(tr200[:24], axis=1)
+    raw_s1 = mne.io.RawArray(s1_cat, mne.create_info(CH_ORDER, 200, "eeg"))
+    raw_s1.set_montage(_clean_montage(), match_case=False, on_missing="warn")
+
+    info = {"method": "iclabel-gated0.5", "comps_fitted": 0, "comps_rejected": 0,
+            "var_rejected": 0.0}
+    try:
+        ica = mne.preprocessing.ICA(n_components=30, method="fastica",
+                                    max_iter=300, random_state=42)
+        ica.fit(raw_s1, decim=3, verbose=False)
+        info["comps_fitted"] = int(ica.n_components_)
+        exclude = []
+        try:
+            from mne_icalabel import label_components
+            labels = label_components(raw_s1, ica, method="iclabel")
+            if isinstance(labels, dict) and "labels" in labels:
+                probs = np.asarray(labels["y_pred_proba"]).ravel()
+                exclude = [int(i) for i, lb in enumerate(labels["labels"])
+                           if lb != "brain" and probs[i] >= 0.5]
+            else:
+                raise RuntimeError("unexpected labels structure")
+        except Exception:
+            # EOG 相关启发式兜底: 与额极通道 (FP1/FPZ/FP2) 相关性 > 0.3 的组件剔除
+            info["method"] = f"eog-fallback"
+            fp = [CH_ORDER.index(c) for c in ("FP1", "FPZ", "FP2")]
+            sources = ica.get_sources(raw_s1).get_data()
+            fp_data = raw_s1.get_data()[fp]
+            for i in range(ica.n_components_):
+                corr = max(abs(np.corrcoef(sources[i], f)[0, 1]) for f in fp_data)
+                if corr > 0.3:
+                    exclude.append(i)
+        exclude = sorted(set(exclude))
+        ica.exclude = exclude
+        info["comps_rejected"] = int(len(exclude))
+        if exclude:
+            rec = ica.apply(raw_s1.copy(), exclude=exclude).get_data()
+            info["var_rejected"] = float((raw_s1.get_data() - rec).var()
+                                         / raw_s1.get_data().var())
+        cleaned = [ica.apply(mne.io.RawArray(
+            t, mne.create_info(CH_ORDER, 200, "eeg")), verbose=False)
+            .get_data().astype(np.float32) for t in tr200]
+    except Exception as e:
+        info["method"] = f"bandpass-only({type(e).__name__})"
+        cleaned = [t.astype(np.float32) for t in tr200]
+
+    if info["method"] == "iclabel-gated0.5":              # 仅成功的完整管道写缓存
+        np.savez(cache_path, **{f"t{i}": t for i, t in enumerate(cleaned)})
+        json.dump(info, open(info_path, "w", encoding="utf-8"))
+    return cleaned, info
+
+
 def load_raw_with_pairs(n_subjects=None, norm_sessions=None):
     """norm_sessions=None: 逐被试全会话统计 (LOSO 标准做法).
     norm_sessions=(1,2): 统计量仅来自指定会话 — 跨会话协议专用,
-    防止测试会话统计量参与训练窗归一化 (2026-08-16 泄露审计修复)."""
+    防止测试会话统计量参与训练窗归一化 (2026-08-16 泄露审计修复).
+    ARTIFACT_CLEAN=True 时先跑 clean_subject_trials 再进窗口切片 (缓存隔离)."""
     subjects = sorted({int(f.split('_')[0])
                        for s in [1, 2, 3]
                        for f in os.listdir(os.path.join(RAW_DIR, str(s)))
@@ -987,7 +1076,7 @@ def load_raw_with_pairs(n_subjects=None, norm_sessions=None):
     t0 = time.time()
 
     for subj_id in subjects:
-        trials, labels, wids = [], [], []
+        trials_800, labels, wids = [], [], []
         for session in [1, 2, 3]:
             sess_dir = os.path.join(RAW_DIR, str(session))
             fname = next((f for f in os.listdir(sess_dir)
@@ -1001,13 +1090,21 @@ def load_raw_with_pairs(n_subjects=None, norm_sessions=None):
                             if not k.startswith('__') and k.endswith(f'_eeg{t + 1}')), None)
                 if var is None:
                     continue
-                raw = np.nan_to_num(data[var]).astype(np.float32)
-                ds = decimate(raw, 4, axis=1)
-                trials.append(ds); labels.append(sess_labels[t])
+                trials_800.append(np.nan_to_num(data[var]).astype(np.float64))
+                labels.append(sess_labels[t])
                 wids.append((session, t))  # (session, trial) — 修复跨session键碰撞
 
-        if not trials:
+        if not trials_800:
             continue
+        if ARTIFACT_CLEAN:
+            trials, cinfo = clean_subject_trials(subj_id, trials_800)
+            print(f"  [Clean] subject {subj_id}: {cinfo['method']} | "
+                  f"剔除 {cinfo['comps_rejected']}/{cinfo['comps_fitted']} 组件 | "
+                  f"方差占比 {cinfo.get('var_rejected', 0):.3f}", flush=True)
+        else:
+            trials = [decimate(tr, 4, axis=1).astype(np.float32)
+                      for tr in trials_800]
+
         stats_trials = trials if norm_sessions is None else \
             [t for t, w in zip(trials, wids) if w[0] in norm_sessions]
         cat = np.concatenate(stats_trials, axis=1)
@@ -1216,7 +1313,8 @@ def collect_diag(model, X_test, y_test, pair_map_test, bs=128):
         "W_mutual_norm": (model.mutual.W_mutual.data.norm().item()
                           if model.use_mutual else None),
         "omega_mean": omega_sum / max(omega_n, 1),
-        "omega_d0": (float(model.mutual.omega_d0) if model.use_mutual else float('nan')),
+        "omega_d0": (float(getattr(model.mutual, "omega_d0", float('nan')))
+                     if model.use_mutual else float('nan')),
     }
 
     # 预迁移诊断 (iter4): 跨trial情绪稳定性预测 (可证伪: vs 真实保持率)
@@ -1270,7 +1368,8 @@ def loso_v5(model_factory, X, y, subj, pair_idx, seeds, epochs=EPOCHS,
         torch.manual_seed(seed); np.random.seed(seed); random.seed(seed)
         for s in range(Ns):
             key = (f"{tag}_{kind}_s{s}_seed{seed}"
-                   + ("_pers" if SOCIETY == "personality" else ""))
+                   + ("_pers" if SOCIETY == "personality" else "")
+                   + ("_clean" if ARTIFACT_CLEAN else ""))
             if done_folds and key in done_folds:
                 print(f"  [skip] {key} (done)")
                 continue
@@ -1381,7 +1480,8 @@ def session_run_v5(model_factory, X, y, subj, wid, pair_idx, seeds, epochs=EPOCH
     for seed in seeds:
         torch.manual_seed(seed); np.random.seed(seed); random.seed(seed)
         key = (f"{tag}_{kind}_sess{sess_name}_seed{seed}"
-               + ("_pers" if SOCIETY == "personality" else ""))
+               + ("_pers" if SOCIETY == "personality" else "")
+               + ("_clean" if ARTIFACT_CLEAN else ""))
         if done_folds and key in done_folds:
             print(f"  [skip] {key} (done)")
             continue
@@ -1462,6 +1562,10 @@ def session_run_v5(model_factory, X, y, subj, wid, pair_idx, seeds, epochs=EPOCH
 # 其两臂由 v6 自己的 main 显式构建, 不走本注册表
 SOCIETY = "mutual"
 
+ARTIFACT_CLEAN = False   # 伪迹剔除 (带通1-50 + ICA/ICLabel) — 默认关闭:
+                         # 论文表3-6全部数字来自未清洗管线, 默认关保持可复现口径;
+                         # --artifact-clean 开启后缓存键带 _clean 后缀, 与原始结果隔离.
+
 
 def make_variant(**kw):
     def _f(plv_adj=None):
@@ -1521,6 +1625,10 @@ def main():
                     choices=["mutual", "personality"],
                     help="社会模块: personality=P6 异构社会 (VI-H, 默认); "
                          "mutual=原同构社会, 复现论文表 3-5 用")
+    ap.add_argument("--artifact-clean", action="store_true",
+                    help="伪迹剔除: 1-50Hz带通 + ICA(会话1拟合) + ICLabel 剔除 "
+                         "(默认关闭 — 论文主结果口径=未清洗; 开启后缓存键带 _clean, "
+                         "数据准备会明显变慢, 结果缓存于 results/artifact_clean_cache/)")
     ap.add_argument("--epochs", type=int, default=EPOCHS)
     ap.add_argument("--models", type=str, default=None)
     ap.add_argument("--tag", type=str, default="v5")
@@ -1552,6 +1660,12 @@ def main():
         global FIELD_ROUTER
         FIELD_ROUTER = True
         print("[ROUTER ON] 场域路由器启用 (证伪/复现实验)")
+
+    global ARTIFACT_CLEAN
+    ARTIFACT_CLEAN = args.artifact_clean
+    if ARTIFACT_CLEAN:
+        print("[CLEAN ON] 伪迹剔除启用: 带通1-50 + ICA/ICLabel; "
+              "缓存键带 _clean 后缀 (论文主结果口径=未清洗)")
 
     global SOCIETY
     SOCIETY = args.society

@@ -4,10 +4,16 @@ __pycache__/
 *.npz
 results/diag/
 results/diag_v5/
+results/artifact_clean_cache/
 results/eeg_v6p_results_smoke.json
+results/eeg_v5clean_smoke_results.json
 *.html
 *.docx
+!paper/DAME_无脑讲解版.docx
 .DS_Store
 SEED_IV/
 DREAMER.mat
 pandoc-*.msi
+build_tmp.sh
+gen_annotated_tmp.py
+paper/.edge_tmp_profile/
