@@ -142,7 +142,7 @@ $$w = \mathrm{softmax}\big(\mathrm{proj}_w(O)\big)\ (\text{有社会}), \qquad w
 
 ## E. 损失与训练：三个子集
 
-完整目标有九项；部署配置使用严格子集（表 2）。每项辅助损失都绑定一个具名机制，在该机制的消融臂中与之同时移除，不存在漂浮的正则项。所有权重是固定小常数（1e-3–0.05）并带已说明的调度，**未做任何按数据集调参**。
+完整目标有九项；部署配置使用严格子集（表 2）。每项辅助损失都绑定一个具名机制，在该机制的消融臂中与之同时移除，不存在漂浮的正则项。全部损失权重是固定小常数（1e-3–0.05）并带已说明的调度，唯 KL 权重例外、其对数为可学习参数（初值 0.008），**未做任何按数据集调参**。
 
 表 2. 损失子集及其部署。
 
@@ -154,7 +154,7 @@ $$w = \mathrm{softmax}\big(\mathrm{proj}_w(O)\big)\ (\text{有社会}), \qquad w
 
 回流下界项 $\mathcal{L}_{reflux} = \mathrm{ReLU}(0.01 - \mathrm{reflux\_mag})$，其中 $\mathrm{reflux\_mag} = \|Z_T - Z_0\|/\|Z_0\|$ 是环产生的相对位移，其存在有原则性理由：早期版本机制权重为零时，消融中性在构造上成立，是循环论证。这些损失是机制保持活跃的保证，每个机制的贡献由各自的消融独立度量。两个预测头损失项（$\mathcal{L}_{self}$、$\mathcal{L}_{stab}$）出现在附录 D 中仅作历史记录：该头已被证伪并退役，本文全部主结果使用 NoPred 配置。
 
-训练：AdamW（学习率 2e-4、权重衰减 1e-4、批 64），15 轮，余弦退火重启（T₀ = 10），种子 42/123/789，KL 预热 8 轮。快速协议：LOSO 8 被试 × 1 种子 × 15 轮（全部基线等预算）；CS 6 被试 × 3 种子。DAME-C5 的一折（1166 个测试窗口）在消费级 GPU 上约 3.5 分钟训练完成。
+训练：AdamW（学习率 2e-4、权重衰减 1e-4、批 64），15 轮，余弦退火重启（T₀ = 10），种子 42/123/789，KL 预热 8 轮。快速协议：LOSO 8 被试 × 1 种子 × 15 轮（全部基线等预算）；CS 6 被试 × 3 种子。DAME-C5 的一折（1166 个测试窗口）在消费级 GPU 上几分钟内训练完成（日志记录：每折训练 66–79 秒、数据准备约 70 秒）。
 
 # V. 理论分析
 
@@ -188,21 +188,21 @@ $$w = \mathrm{softmax}\big(\mathrm{proj}_w(O)\big)\ (\text{有社会}), \qquad w
 
 ## B. 截断迭代的梯度误差界
 
-训练对截断迭代微分。所得梯度离真实不动点的梯度有多远？设 $J(Z, \theta)$ 为以精华 $Z$ 与参数 $\theta$ 为变量的损失；记 $Z_T$ 为 T 步回流后的迭代值，$Z^*$ 为真实不动点。假设：(i) 回流映射对 $Z$ 为 $\gamma$-Lipschitz 且 $\gamma < 1$（定理 1）；(ii) $J$ 对 $(Z, \theta)$ 联合 $L_J$-光滑；(iii) 回流映射联合 $L_B$-光滑；(iv) 迭代值与不动点落在半径 $R_0$ 的球内，其上损失梯度以 Ȳ 为界。
+训练对截断迭代微分。所得梯度离真实不动点的梯度有多远？设 $J(Z, \theta)$ 为以精华 $Z$ 与参数 $\theta$ 为变量的损失；记 $Z_T$ 为 T 步回流后的迭代值（此处 T 为截断长度；回流映射记作 $T(\cdot)$），$Z^*$ 为真实不动点。假设：(i) 回流映射对 $Z$ 为 $\gamma$-Lipschitz 且 $\gamma < 1$（定理 1）；(ii) $J$ 对 $(Z, \theta)$ 联合 $L_J$-光滑；(iii) 回流映射联合 $L_B$-光滑；(iv) 迭代值与不动点落在半径 $R_0$ 的球内，其上损失梯度以 Ȳ 为界。
 
 **命题 3（截断的梯度误差）。** 在 (i)–(iv) 下，记 $e_t = \|Z_t - Z^*\|$，并额外假设球上 $\|\partial J/\partial Z\| \le \bar{Y}$ 且 $\|\partial Z_T/\partial\theta\|, \|\partial Z^*/\partial\theta\| \le \bar{D}$。则
 
-$$\big\|\nabla_\theta J(Z_T, \theta) - \nabla_\theta J(Z^*, \theta)\big\| \;\le\; C_1\,\gamma^T e_0 \;+\; C_2\,\gamma^T \;+\; C_3\,T\,e_0\,\gamma^{\,T-1},$$
+$$\big\|\nabla_\theta J(Z_T, \theta) - \nabla_\theta J(Z^*, \theta)\big\| \;\le\; C_1\,\gamma^T e_0 \;+\; C_2\,\gamma^T \;+\; C_3\,T\,e_0\,\gamma^{\,T-1} \;+\; C_4\,T^2\,e_0\,\gamma^{\,T-1},$$
 
-其中 $C_1 = L_J \bar{D}$、$C_2 = \bar{Y}\bar{B}/(1-\gamma)$、$C_3 = \bar{Y} L_B$，$\bar{B}$ 界住球上 $\|\nabla_\theta T\|$。特别地，截断迭代的雅可比以速率
+其中 $C_1 = L_J (\bar{D}+1)$、$C_2 = \bar{Y}\bar{B}/(1-\gamma)$、$C_3 = \bar{Y} L_B$、$C_4 = \tfrac{1}{2}\bar{Y}\bar{B} L_B$，$\bar{B}$ 界住球上 $\|\nabla_\theta T\|$。特别地，截断迭代的雅可比以速率
 
-$$\left\|\frac{\partial Z_T}{\partial\theta} - \frac{\partial Z^*}{\partial\theta}\right\| \;\le\; \frac{\bar{B}\,\gamma^T}{1-\gamma} \;+\; T\,L_B\,e_0\,\gamma^{\,T-1}$$
+$$\left\|\frac{\partial Z_T}{\partial\theta} - \frac{\partial Z^*}{\partial\theta}\right\| \;\le\; \frac{\bar{B}\,\gamma^T}{1-\gamma} \;+\; T\,L_B\,e_0\,\gamma^{\,T-1} \;+\; \tfrac{1}{2}T(T-1)\,\bar{B}\,L_B\,e_0\,\gamma^{\,T-1}$$
 
 收敛到隐式雅可比。
 
-*证明概要。* 迭代误差几何收缩，$e_t \le \gamma^t e_0$（定理 2）。对不动点方程 $Z^* = T(Z^*, \theta)$ 微分得 $\partial Z^*/\partial\theta = (I - \nabla_Z T)^{-1}\nabla_\theta T$，由收缩与 Neumann 级数知其范数至多 $\bar{B}/(1-\gamma)$。链式法则把梯度差拆成经迭代误差的项——以 $L_J\bar{D}\gamma^T e_0$ 为界——与经雅可比差的项——以 $\bar{Y}\|\partial Z_T/\partial\theta - \partial Z^*/\partial\theta\|$ 为界。后者有两个来源：隐式雅可比的几何尾部，以 $\bar{B}\gamma^T/(1-\gamma)$ 为界；以及 $T$ 沿轨迹的 θ-光滑性，在每个反向步上累积 $L_B e_t \le L_B\gamma^t e_0$，共 T 步，求和得 $T L_B e_0 \gamma^{T-1}$。∎
+*证明概要。* 迭代误差几何收缩，$e_t \le \gamma^t e_0$（定理 2）。对不动点方程 $Z^* = T(Z^*, \theta)$ 微分得 $\partial Z^*/\partial\theta = (I - \nabla_Z T)^{-1}\nabla_\theta T$，由收缩与 Neumann 级数知其范数至多 $\bar{B}/(1-\gamma)$。链式法则把梯度差拆成经迭代误差的项——直接参数梯度差加上 $\partial J/\partial Z$ 中的迭代误差，合计以 $L_J(\bar{D}+1)\gamma^T e_0$ 为界——与经雅可比差的项——以 $\bar{Y}\|\partial Z_T/\partial\theta - \partial Z^*/\partial\theta\|$ 为界。后者有三个来源：隐式雅可比的几何尾部，以 $\bar{B}\gamma^T/(1-\gamma)$ 为界；$T$ 沿轨迹的 θ-光滑性，其中第 $t$ 步的参数雅可比点误差（至多 $L_B\gamma^t e_0$）经剩余 $T-1-t$ 个收缩步传播，每步贡献 $L_B e_0 \gamma^{T-1}$（共 T 步）；以及雅可比点误差与参数雅可比界 $\bar{B}$ 的交叉项，至多贡献 $\tfrac{1}{2}T(T-1)\,\bar{B}\,L_B\,e_0\,\gamma^{T-1}$。∎
 
-三项都以几何速率消失，但速率不同。取 γ 接近初始化值 0.05、T = 5 时，$\gamma^5 \approx 3\times 10^{-7}$ 而 $T\gamma^{T-1} \approx 3\times 10^{-5}$，因此轨迹光滑项在该尺度上主导截断误差，且两者都比早期轮次之后损失梯度的噪声水平低几个数量级。这个界买到的结论：回流环可以被当作已收敛来训练，无需 [20,22] 的隐函数机制。诚实的保留：条件 (iv) 与雅可比有界条件由训练中观测到的范数核验，而非先验保证，常数是估计值而非紧界。这个界的作用是把"截断大概没问题"变成一条可检查的陈述，确认性协议逐轮记录 $e_T$ 作为检查。
+四项都以几何速率消失，但速率不同。取 γ 接近初始化值 0.05、T = 5 时，$\gamma^5 \approx 3\times 10^{-7}$，而轨迹项以 $T\gamma^{T-1} \approx 3\times 10^{-5}$ 与 $T(T-1)\gamma^{T-1}/2 \approx 6\times 10^{-5}$ 的尺度出现，因此轨迹光滑项在该尺度上主导截断误差，且全部项都比早期轮次之后损失梯度的噪声水平低几个数量级。这个界买到的结论：回流环可以被当作已收敛来训练，无需 [20,22] 的隐函数机制。诚实的保留：条件 (iv) 与雅可比有界条件与报告运行中观测到的训练期尺度一致、但未逐轮监控，且无论如何常数是估计值而非紧界。这个界的作用是把"截断大概没问题"变成一条可检查的陈述，确认性协议逐轮记录 $e_T$ 作为检查。
 
 ## C. 收缩常数的正则化
 
@@ -242,7 +242,7 @@ $$P\big(f(Z) = S\big) \;\le\; \max_s p(S = s).$$
 
 *证明。* 场不变性给出 $p(Z|S=s) = p(Z)$（共同值），故 $p(S = s \mid Z) = \frac{p(Z|S=s)\,p(S=s)}{p(Z)} = p(S = s)$：后验等于先验。于是 $P(f(Z) = S) = \sum_z p(Z=z)\sum_s p(S=s|Z=z)\,\mathbb{1}[f(z)=s] \le \sum_z p(Z=z)\,\max_s p(S=s|Z=z) = \max_s p(S=s)$（当 $Z$ 连续时，对 $z$ 的求和理解为积分）。∎
 
-**有限样本扩展。** 当不变性仅近似成立时，界优雅退化：若每个场中 $p(Z|S=s)$ 与池化 $p(Z)$ 的总变差至多 ε，则 $P(f(Z)=S) \le \max_s p(s)\cdot(1 + 2\varepsilon)$。由 Fano 不等式，完全不变性强制 $H(S|Z) = H(S)$：场身份信息恰为零，任何训练程序都无法从该表示恢复它。
+**有限样本扩展。** 当不变性仅近似成立时，界优雅退化：若每个场中 $p(Z|S=s)$ 与池化 $p(Z)$ 的总变差至多 ε，则 $P(f(Z)=S) \le \max_s p(s)\cdot(1 + 2\varepsilon)$。由不变性条件本身，完全不变性强制 $H(S|Z) = H(S)$：场身份信息恰为零，任何训练程序都无法从该表示恢复它。
 
 **实证推论。** 基于窗口级耦合统计量的自动场路由器在三道判决门上被检验。亲和度 ω 在两类场之间无分离（0.490–0.507 vs 0.495）。路由器未能移除 LOSO 中的社会拖累（30.38 vs 31.19），在跨会话中损失 0.57 个百分点而不是保住社会增益（router-NoPred 30.29 vs NoPred 30.85）。离线探测随后穷举五种指纹族，均无可用的分离；数字见附录 E。SEED-IV 的窗口级统计量根本不携带可解码的场身份。
 
@@ -330,7 +330,7 @@ H2 在数据之前重述。小差距场在同一大脑的不同会话上训练�
 
 **场路由器：被证伪并禁用。** 为检验场开关能否被习得而非供给，我们实现了路由器 ω = σ(a(d₀ − d))，其中 d 是窗口耦合指纹与训练集 EMA 参考之间的余弦失配，d₀ 为第 95 百分位标定（无泄漏）。三道判决门全部失败（第 V-E 节），离线探测穷举五种指纹族亦无可用分离（附录 E）。跨会话协议中路由器在完整臂上损失 0.57 个百分点（逐种子 +1.36、0.00、+0.35；router-NoPred 30.29 vs NoPred 30.85），对移除社会的臂无增益；LOSO 中它未能移除社会拖累（30.38 vs 31.19）。路由器已禁用（ω ≡ 1），作为有记录的负结果保留在代码库中。
 
-**整数巧合异常。** 第一次 LOSO 运行中的一处巧合起初看着吓人、细看很平常，它塑造了我们的报告纪律。每个测试被试贡献相同数量的窗口（1166），所以每折精度等于正确窗口数除以同一个分母。NoMutual 与 Base 的逐折精度差恰为 1/1166 的整数倍（+8、−23、+40、−9、−11、−11、+1、+5 个正确窗口），其和恰好为零。这是一个整数巧合，在均匀随机整数模型下的精确概率为 0.00336 ≈ 0.3%（符号和在 −23 至 +40 共 64 个值上分布），不是记录伪影。逐折散布的差异（Base 4.66 vs NoMutual 3.95）同样不显著：F(7,7) = 1.37，p ≈ 0.69（双侧）。新种子重跑（seed 123）证实这一解读：NoMutual 34.96±5.30 vs Base 32.47±4.95（+2.49，t(7)=1.65，p=0.144，NB p=0.298，置换 p=0.109，d=0.58）；巧合不重现。本文每张表都在窗口分辨率上报告逐折差。
+**整数巧合异常。** 第一次 LOSO 运行中的一处巧合起初看着吓人、细看很平常，它塑造了我们的报告纪律。每个测试被试贡献相同数量的窗口（1166），所以每折精度等于正确窗口数除以同一个分母。NoMutual 与 Base 的逐折精度差恰为 1/1166 的整数倍（+8、−23、+40、−9、−11、−11、+1、+5 个正确窗口），其和恰好为零。这是一个整数巧合，在均匀随机整数模型下的精确概率为 0.00336 ≈ 0.3%（符号和在 −23 至 +40 共 64 个值上分布），不是记录伪影。逐折散布的差异（Base 4.66 vs NoMutual 3.95）同样不显著：F(7,7) = 1.39，p ≈ 0.67（双侧）。新种子重跑（seed 123）证实这一解读：NoMutual 34.96±5.30 vs Base 32.47±4.95（+2.49，t(7)=1.65，p=0.144，NB p=0.298，置换 p=0.109，d=0.58）；巧合不重现。本文每张表都在窗口分辨率上报告逐折差。
 
 ## E. 数据级耦合分析（H1 的预测，不经任何解码器）
 
@@ -446,7 +446,7 @@ Self 与 Stab 仅为历史记录：融合预测头已被证伪并退役（附录
 
 # 附录 C：互助社会细节
 
-12 个专家、每脑区一个；各持 32 维 GRU 记忆。门控：专家分数上 softmax，温度八轮内 0.8 → 3.5 退火；分数以蒸馏精华与池化耦合上下文为条件，耦合强度直接参与。邻接 $W_{mutual}$ 由训练折 PLV 均值矩阵初始化、L1 归一化。损失：正交性（嵌入）、互助一致性、特化（各专家拥有输出空间区域）、门熵，权重均 1e-3。社区检测：逐折阈值化共激活图；最常见社区模式只出现在 8 折中的 2 折（第 VI-F 节），因此社区是监控，不是发现。
+12 个专家、每脑区一个；各持 32 维 GRU 记忆。门控：$g_i = \sigma\big(\mathrm{temp}\cdot\cos(\text{边模式}_i, \text{策略}_i) + b_i + \mathrm{proj}_{coup}(\text{耦合强度})\big)$ 逐专家计算，温度八轮内 0.8 → 3.5 退火，偏置初值 −0.2；各专家把自身 11 条入边 PLV 的模式与其固定脑区策略锚比对打分，耦合强度直接参与。邻接 $W_{mutual}$ 由训练折 PLV 均值矩阵初始化、L1 归一化。损失：正交性（嵌入）、互助一致性、特化（各专家拥有输出空间区域）、门熵，权重均 1e-3。社区检测：逐折阈值化共激活图；最常见社区模式只出现在 8 折中的 2 折（第 VI-F 节），因此社区是监控，不是发现。
 
 # 附录 D：稳定性头红旗与修复协议
 
@@ -472,9 +472,13 @@ Self 与 Stab 仅为历史记录：融合预测头已被证伪并退役（附录
 
 # 图
 
-图 7. 场条件定律（H2，命题 1）：社会贡献 $a\sqrt{\kappa} - \eta$，小差距场为正、大差距场接近零；水贡献相对场不变。见 ../figures/fig7_domain_gap_hypothesis.png。
+![图 7 — 场条件定律](../figures/fig7_domain_gap_hypothesis.png)
 
-图 8. 仅用真实标签的数据级耦合分析（第 VI-E 节）。(a) 高唤醒（恐惧、快乐）与低唤醒（中性、悲伤）类别在 PFC–CP 上的 PLV 对比（按频段，八折）：β +0.0109，t(7)=3.94，p=0.0056；δ +0.0074，p=0.065；其余频段不显著。(b) 各类整矩阵平均 PLV：0.4422 / 0.4426 / 0.4433 / 0.4399，全部两两 p > 0.3。见 ../figures/fig8_seed_data_coupling.png。
+**图 7 — 场条件定律**（H2，命题 1）：社会贡献 $a\sqrt{\kappa} - \eta$，小差距场为正、大差距场接近零；水贡献相对场不变。
+
+![图 8 — 数据级耦合分析](../figures/fig8_seed_data_coupling.png)
+
+**图 8 — 仅用真实标签的数据级耦合分析**（第 VI-E 节）。(a) 高唤醒（恐惧、快乐）与低唤醒（中性、悲伤）类别在 PFC–CP 上的 PLV 对比（按频段，八折）：β +0.0109，t(7)=3.94，p=0.0056；δ +0.0074，p=0.065；其余频段不显著。(b) 各类整矩阵平均 PLV：0.4422 / 0.4426 / 0.4433 / 0.4399，全部两两 p > 0.3。
 
 补充图（第 VI-F 节，分析细节）：../figures/fig2_watercycle_detail.png（水循环模块细节），../figures/fig3_mutual_society.png（互助社会模块细节），../figures/fig4_results_heatmap.png（各臂结果热图），../figures/fig5_ablation_analysis.png（消融对比），../figures/fig6_convergence_gates.png（回流收敛与门控统计）。架构的三维渲染见 ../figures/fig1_3d_architecture.png、../figures/fig2_3d_watercycle.png 与 ../figures/fig3_3d_mutual.png。
 
@@ -492,7 +496,7 @@ Self 与 Stab 仅为历史记录：融合预测头已被证伪并退役（附录
 
 [5] Y. Bai, C. Jiang, J. Hu, and Y. Li, "Network coupling characteristics of emotional processing based on weighted phase lag index," in *Proc. IEEE EMBC*, 2025, doi: 10.1109/EMBC58623.2025.11253529.
 
-[6] W.-L. Zheng and B.-L. Lu, "Investigating critical frequency bands and channels for EEG-based emotion recognition with deep neural networks," *IEEE Trans. Auton. Mental Develop.*, vol. 7, no. 3, pp. 162–175, 2015.
+[6] W.-L. Zheng and B.-L. Lu, "Identifying stable patterns over time for emotion recognition from EEG," *IEEE Trans. Affective Comput.*, vol. 10, no. 3, pp. 417–429, 2019.
 
 [7] R. Chen, C. Xie, J. Zhang, Q. You, and J. Pan, "Progressive multimodal domain adaptation for EEG emotion recognition," *IEEE Trans. Neural Syst. Rehabil. Eng.*, vol. 33, pp. 3498–3510, 2025, doi: 10.1109/TNSRE.2025.3603190.
 
@@ -551,3 +555,5 @@ Self 与 Stab 仅为历史记录：融合预测头已被证伪并退役（附录
 ---
 
 **修订说明（中文版保留）。** 本次与英文版同步修订：架构全称更新为 DAME（去中心化类水互助本质导向架构，Decentralized Aqua-like Mutual Essential-Oriented Architecture），摘要改为三段式并补充关键公式的"用人话说"注释。一处无法核实的引用已从正文与参考文献中移除。原条目按未完成标注保留如下备查，待核实后决定是否恢复：Suo and Li, "Protocol evaluation of direct-transfer EEG emotion decoding," preprint, 2026（详情待核）。另，伪迹剔除快速审计（n = 4，ICA + ICLabel）已完成，结果写入第 VI-E 节、局限（vi）与未来工作（4）。
+
+**2026-08-24 核对修订（与英文版同步）**：① 第 VI-D 节 F 统计量按精确数据修正（F(7,7) = 1.37 → 1.39，p ≈ 0.69 → 0.67；结论不变）；② 参考文献 [6] 换为 SEED-IV 数据集的真正出处（Zheng & Lu, IEEE TAC 10(3):417–429, 2019；原条目引的是 2015 年旧 SEED 三分类论文）；③ 附录 C 门控描述与正文 IV-C 节对齐（边模式-策略余弦门控）；④ 命题 3 补入两项此前遗漏的同阶项：直接参数梯度项（C₁ = L_J(D̄+1)）与雅可比点误差×B̄ 的 T² 交叉项（新增 C₄ = ½ȲB̄L_B），并修正证明概要中传播因子的表述；⑤ 图 7/图 8 嵌入正文（此前为裸路径文本）；⑥ 训练时长按日志修正（"约 3.5 分钟"→ 66–79 秒训练 + 约 70 秒数据准备）；⑦ KL 权重为可学习对数尺度的说明与正文"全部权重固定"对齐；⑧ Fano 不等式归属移除（H(S|Z)=H(S) 直接由不变性条件得出）。

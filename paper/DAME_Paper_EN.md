@@ -142,7 +142,7 @@ In words: the society decides how much weight each of the three input terms gets
 
 ## E. Loss and Training: Three Subsets
 
-The full objective has nine terms; the deployed configurations use strict subsets (Table 2). Every auxiliary term is bound to a named mechanism and is removed jointly with that mechanism in its ablation arm, so there are no free-floating regularizers. All weights are fixed small constants (1e-3 to 0.05) with the schedules stated, and no per-dataset tuning was performed.
+The full objective has nine terms; the deployed configurations use strict subsets (Table 2). Every auxiliary term is bound to a named mechanism and is removed jointly with that mechanism in its ablation arm, so there are no free-floating regularizers. All loss weights are fixed small constants (1e-3 to 0.05) with the schedules stated, except the KL weight, whose log-scale is learned (initialized at 0.008), and no per-dataset tuning was performed.
 
 Table 2. Loss subsets and their deployment.
 
@@ -154,7 +154,7 @@ Table 2. Loss subsets and their deployment.
 
 The reflux lower-bound term L_reflux = ReLU(0.01 − reflux_mag), with reflux_mag = ‖Z_T − Z_0‖/‖Z_0‖ the relative displacement produced by the loop, exists for a principled reason: an earlier version with zero mechanism weights produced neutral ablations by construction, which is a circular argument. These losses are the guarantees that mechanisms stay alive, and every mechanism's contribution is independently measured by its ablation. The two prediction-head terms (L_self, L_stab) appear in Appendix D solely as a historical record: the head was falsified and retired, and every main result in this paper uses the NoPred configuration.
 
-Training: AdamW (learning rate 2e-4, weight decay 1e-4, batch 64), 15 epochs, cosine-annealing restarts (T₀ = 10), seeds 42/123/789, KL warmup 8 epochs. Fast protocol: LOSO on 8 subjects × 1 seed × 15 epochs (equal budget for all baselines); CS on 6 subjects × 3 seeds. One fold (1166 test windows) of DAME-C5 trains in about 3.5 minutes on a consumer GPU.
+Training: AdamW (learning rate 2e-4, weight decay 1e-4, batch 64), 15 epochs, cosine-annealing restarts (T₀ = 10), seeds 42/123/789, KL warmup 8 epochs. Fast protocol: LOSO on 8 subjects × 1 seed × 15 epochs (equal budget for all baselines); CS on 6 subjects × 3 seeds. One fold (1166 test windows) of DAME-C5 trains in a few minutes on a consumer GPU (66–79 s of training plus about 70 s of data preparation per fold in the logged runs).
 
 # V. THEORETICAL ANALYSIS
 
@@ -188,19 +188,19 @@ The inference map is T(Z) = W_μ(R + s·g_φ(Z)) = W_μ R + s·W_μ g_φ(Z), an 
 
 ## B. Truncated-Iteration Gradient Error Bound
 
-Training differentiates through the truncated iteration. How far is the resulting gradient from the gradient of the true fixed point? Let J(Z, θ) be the loss as a function of the essence Z and the parameters θ; write Z_T for the iterate after T reflux steps and Z* for the true fixed point. Assume: (i) the reflux map is γ-Lipschitz in Z with γ < 1 (Theorem 1); (ii) J is L_J-smooth jointly in (Z, θ); (iii) the reflux map is L_B-smooth jointly; (iv) the iterates and the fixed point stay in a ball of radius R₀ where the loss gradient is bounded by Ȳ.
+Training differentiates through the truncated iteration. How far is the resulting gradient from the gradient of the true fixed point? Let J(Z, θ) be the loss as a function of the essence Z and the parameters θ; write Z_T for the iterate after T reflux steps (T here the truncation length; the reflux map is written T(·)) and Z* for the true fixed point. Assume: (i) the reflux map is γ-Lipschitz in Z with γ < 1 (Theorem 1); (ii) J is L_J-smooth jointly in (Z, θ); (iii) the reflux map is L_B-smooth jointly; (iv) the iterates and the fixed point stay in a ball of radius R₀ where the loss gradient is bounded by Ȳ.
 
 **Proposition 3 (gradient error of truncation).** Under (i)–(iv), with e_t = ‖Z_t − Z*‖, assume additionally that ‖∂J/∂Z‖ ≤ Ȳ and that ‖∂Z_T/∂θ‖, ‖∂Z*/∂θ‖ ≤ D̄ on the ball. Then
 
-$$\big\|\nabla_\theta J(Z_T, \theta) - \nabla_\theta J(Z^*, \theta)\big\| \;\le\; C_1\,\gamma^T e_0 \;+\; C_2\,\gamma^T \;+\; C_3\,T\,e_0\,\gamma^{\,T-1},$$
+$$\big\|\nabla_\theta J(Z_T, \theta) - \nabla_\theta J(Z^*, \theta)\big\| \;\le\; C_1\,\gamma^T e_0 \;+\; C_2\,\gamma^T \;+\; C_3\,T\,e_0\,\gamma^{\,T-1} \;+\; C_4\,T^2\,e_0\,\gamma^{\,T-1},$$
 
-with C₁ = L_J D̄, C₂ = Ȳ B̄/(1−γ), C₃ = Ȳ L_B, where B̄ bounds ‖∇_θ T‖ on the ball. In particular the Jacobian of the truncated iterate converges to the implicit Jacobian at the rate
+with C₁ = L_J(D̄+1), C₂ = Ȳ B̄/(1−γ), C₃ = Ȳ L_B, C₄ = ½Ȳ B̄ L_B, where B̄ bounds ‖∇_θ T‖ on the ball. In particular the Jacobian of the truncated iterate converges to the implicit Jacobian at the rate
 
-$$\left\|\frac{\partial Z_T}{\partial\theta} - \frac{\partial Z^*}{\partial\theta}\right\| \;\le\; \frac{\bar{B}\,\gamma^T}{1-\gamma} \;+\; T\,L_B\,e_0\,\gamma^{\,T-1}.$$
+$$\left\|\frac{\partial Z_T}{\partial\theta} - \frac{\partial Z^*}{\partial\theta}\right\| \;\le\; \frac{\bar{B}\,\gamma^T}{1-\gamma} \;+\; T\,L_B\,e_0\,\gamma^{\,T-1} \;+\; \tfrac{1}{2}T(T-1)\,\bar{B}\,L_B\,e_0\,\gamma^{\,T-1}.$$
 
-*Proof sketch.* The iterate error contracts geometrically, e_t ≤ γ^t e_0 (Theorem 2). Differentiating the fixed-point equation Z* = T(Z*, θ) gives ∂Z*/∂θ = (I − ∇_Z T)^{-1} ∇_θ T, of norm at most B̄/(1−γ) by the contraction and the Neumann series. The chain rule splits the gradient difference into a term through the iterate error, bounded by L_J D̄ γ^T e_0, and a term through the Jacobian difference, bounded by Ȳ‖∂Z_T/∂θ − ∂Z*/∂θ‖. That difference has two sources: the geometric tail of the implicit Jacobian, bounded by B̄γ^T/(1−γ), and the θ-smoothness of T along the trajectory, which accumulates L_B e_t ≤ L_B γ^t e_0 over each of the T backward steps, summing to T L_B e_0 γ^{T−1}. ∎
+*Proof sketch.* The iterate error contracts geometrically, e_t ≤ γ^t e_0 (Theorem 2). Differentiating the fixed-point equation Z* = T(Z*, θ) gives ∂Z*/∂θ = (I − ∇_Z T)^{-1} ∇_θ T, of norm at most B̄/(1−γ) by the contraction and the Neumann series. The chain rule splits the gradient difference into a term through the iterate error — the direct parameter-gradient difference plus the iterate error in ∂J/∂Z, together bounded by L_J(D̄+1) γ^T e_0 — and a term through the Jacobian difference, bounded by Ȳ‖∂Z_T/∂θ − ∂Z*/∂θ‖. That difference has three sources: the geometric tail of the implicit Jacobian, bounded by B̄γ^T/(1−γ); the θ-smoothness of T along the trajectory, where the parameter-Jacobian point error at step t (at most L_B γ^t e_0) propagates through the remaining T−1−t contracted steps, contributing L_B e_0 γ^{T−1} per step (T steps in total); and the Jacobian-point errors crossed with the parameter-Jacobian bound B̄, contributing at most ½T(T−1) B̄ L_B e_0 γ^{T−1}. ∎
 
-All three terms vanish geometrically, but at different rates. With γ near the initialization value 0.05 and T = 5, γ⁵ ≈ 3e-7 while Tγ^{T−1} ≈ 3e-5, so the trajectory-smoothness term dominates the truncation error at this scale, and both are orders of magnitude below the noise level of the loss gradients after the early epochs. What the bound buys: the reflux loop can be treated as converged without the implicit-function machinery of [20,22]. The honest caveat: (iv) and the bounded-Jacobian conditions are verified by the norms observed in training, not guaranteed a priori, and the constants are estimated rather than tight. The bound's role is to turn "truncation is probably fine" into a checkable statement, and the confirmatory protocol records e_T per epoch as the check.
+All four terms vanish geometrically, but at different rates. With γ near the initialization value 0.05 and T = 5, γ⁵ ≈ 3e-7 while the trajectory terms scale as Tγ^{T−1} ≈ 3e-5 and T(T−1)γ^{T−1}/2 ≈ 6e-5, so the trajectory-smoothness terms dominate the truncation error at this scale, and all of them are orders of magnitude below the noise level of the loss gradients after the early epochs. What the bound buys: the reflux loop can be treated as converged without the implicit-function machinery of [20,22]. The honest caveat: (iv) and the bounded-Jacobian conditions are consistent with the training-time scales observed in the reported runs but were not monitored per epoch, and in any case the constants are estimated rather than tight. The bound's role is to turn "truncation is probably fine" into a checkable statement, and the confirmatory protocol records e_T per epoch as the check.
 
 ## C. Regularizing the Contraction Constant
 
@@ -240,7 +240,7 @@ In words: if the representation looks the same in every field, no classifier can
 
 *Proof.* Field invariance gives p(Z|S=s) = p(Z) (the common value), hence p(S=s | Z) = p(Z|S=s) p(S=s)/p(Z) = p(S=s): the posterior equals the prior. Then P(f(Z)=S) = Σ_z p(Z=z) Σ_s p(S=s|Z=z) 1[f(z)=s] ≤ Σ_z p(Z=z) max_s p(S=s|Z=z) = max_s p(S=s), with the sum over z read as an integral when Z is continuous. ∎
 
-**Finite-sample extension.** When invariance holds only approximately, the bound degrades gracefully. If the total-variation deviation of p(Z|S=s) from the pooled p(Z) is at most ε in every field, then P(f(Z)=S) ≤ max_s p(s) · (1 + 2ε). By Fano's inequality, perfect invariance forces H(S|Z) = H(S): the field identity information is exactly zero, so no training procedure can recover it from the representation.
+**Finite-sample extension.** When invariance holds only approximately, the bound degrades gracefully. If the total-variation deviation of p(Z|S=s) from the pooled p(Z) is at most ε in every field, then P(f(Z)=S) ≤ max_s p(s) · (1 + 2ε). By the invariance condition itself, perfect invariance forces H(S|Z) = H(S): the field identity information is exactly zero, so no training procedure can recover it from the representation.
 
 **Empirical corollary.** An automatic field router built on window-level coupling statistics was tested on three decision gates. The affinity ω showed no separation between fields (0.490–0.507 vs 0.495). The router failed to remove the society drag in LOSO (30.38 vs 31.19), and in cross-session it cost 0.57 points instead of keeping the society gain (router-NoPred 30.29 vs NoPred 30.85). An offline probe then exhausted five fingerprint families with no usable separation; the numbers are in Appendix E. The window-level statistics of SEED-IV simply do not carry a decodable field identity.
 
@@ -328,7 +328,7 @@ Taken together with Table 5, H2's two branches read as follows: society +0.77 in
 
 **The field router: falsified and disabled.** To test whether the field switch could be learned instead of supplied, we implemented a router ω = σ(a(d₀ − d)), where d is the cosine mismatch between a window's coupling fingerprint and a training-set EMA reference, and d₀ the 95th-percentile calibration (leakage-free). All three decision gates failed (Section V-E), and the offline probe exhausted five fingerprint families with no usable separation (Appendix E). In the cross-session protocol the router costs 0.57 points on the full arm (+1.36, 0.00, +0.35 per seed; router-NoPred 30.29 vs NoPred 30.85) while adding nothing to the society-removed arm, and in LOSO it fails to remove the society drag (30.38 vs 31.19). The router is disabled (ω ≡ 1) and retained in the codebase as a documented negative result.
 
-**The integer-coincidence anomaly.** One coincidence in the first LOSO run looked alarming and turned out to be mundane, and it shaped our reporting discipline. Every test subject contributes the same number of windows (1166), so each fold's accuracy is its correct-window count divided by a common denominator. The per-fold accuracy differences between NoMutual and Base are exact integer multiples of 1/1166 (+8, −23, +40, −9, −11, −11, +1, +5 correct windows), and their sum happens to be zero. That is an integer coincidence whose exact probability under a uniform-random integer model is 0.00336 ≈ 0.3% (the signed sum ranges over 64 values, −23 to +40), not a recording artifact. The differing per-fold spreads (Base 4.66 vs NoMutual 3.95) are not significant either: F(7,7) = 1.37, p ≈ 0.69 (two-sided). A fresh-seed rerun (seed 123) confirms the reading: NoMutual 34.96±5.30 vs Base 32.47±4.95 (+2.49, t(7)=1.65, p=0.144, NB p=0.298, perm p=0.109, d=0.58); the coincidence does not reproduce. Every table in this paper reports per-fold differences at window resolution.
+**The integer-coincidence anomaly.** One coincidence in the first LOSO run looked alarming and turned out to be mundane, and it shaped our reporting discipline. Every test subject contributes the same number of windows (1166), so each fold's accuracy is its correct-window count divided by a common denominator. The per-fold accuracy differences between NoMutual and Base are exact integer multiples of 1/1166 (+8, −23, +40, −9, −11, −11, +1, +5 correct windows), and their sum happens to be zero. That is an integer coincidence whose exact probability under a uniform-random integer model is 0.00336 ≈ 0.3% (the signed sum ranges over 64 values, −23 to +40), not a recording artifact. The differing per-fold spreads (Base 4.66 vs NoMutual 3.95) are not significant either: F(7,7) = 1.39, p ≈ 0.67 (two-sided). A fresh-seed rerun (seed 123) confirms the reading: NoMutual 34.96±5.30 vs Base 32.47±4.95 (+2.49, t(7)=1.65, p=0.144, NB p=0.298, perm p=0.109, d=0.58); the coincidence does not reproduce. Every table in this paper reports per-fold differences at window resolution.
 
 ## E. Data-Level Coupling Analyses (Predictions of H1, No Decoder Involved)
 
@@ -444,7 +444,7 @@ Code and reproducibility materials are publicly available at https://github.com/
 
 # APPENDIX C: Mutual-Society Details
 
-Twelve experts, one per region; each keeps a 32-dim GRU memory. Gates: softmax over expert scores, temperature-annealed 0.8 → 3.5 over eight epochs; scores conditioned on the distilled essence and the pooled coupling context, with coupling strength participating directly. Adjacency W_mutual initialized from the training-fold PLV mean matrix, L1-normalized. Losses: orthogonality (embeddings), mutual agreement, specialization (each expert owns output-space regions), gate entropy, all at weight 1e-3. Community detection: thresholded co-activation graph per fold; the modal community is present in only 2 of 8 folds (Section VI-F), so communities are a monitor, not a finding.
+Twelve experts, one per region; each keeps a 32-dim GRU memory. Gates: g_i = σ(temp · cos(edge pattern_i, strategy_i) + b_i + proj_coup(coupling strength)) per expert, temperature-annealed 0.8 → 3.5 over eight epochs, bias initialized −0.2; each expert scores the pattern of its 11 incoming PLV edges against its fixed region strategy anchor, with coupling strength participating directly. Adjacency W_mutual initialized from the training-fold PLV mean matrix, L1-normalized. Losses: orthogonality (embeddings), mutual agreement, specialization (each expert owns output-space regions), gate entropy, all at weight 1e-3. Community detection: thresholded co-activation graph per fold; the modal community is present in only 2 of 8 folds (Section VI-F), so communities are a monitor, not a finding.
 
 # APPENDIX D: Stability-Head Red Flag and Repair Protocol
 
@@ -470,9 +470,13 @@ The prediction head was designed with two passes: Pass 1 reconstructed a frozen 
 
 # FIGURES
 
-Figure 7. The field-conditional law (H2, Proposition 1): society contribution a√κ − η, positive in the small-gap field and near zero in the large-gap field; water contribution comparatively field-invariant. See ../figures/fig7_domain_gap_hypothesis.png.
+![Figure 7 — the field-conditional law](../figures/fig7_domain_gap_hypothesis.png)
 
-Figure 8. Data-level coupling analyses with ground-truth labels only (Section VI-E). (a) PFC–CP PLV contrast between high-arousal (fear, happy) and low-arousal (neutral, sad) classes by band, over eight folds: beta +0.0109, t(7)=3.94, p=0.0056; delta +0.0074, p=0.065; other bands n.s. (b) Whole-matrix mean PLV by class: 0.4422 / 0.4426 / 0.4433 / 0.4399, all pairwise p > 0.3. See ../figures/fig8_seed_data_coupling.png.
+**Fig. 7 — The field-conditional law** (H2, Proposition 1): society contribution a√κ − η, positive in the small-gap field and near zero in the large-gap field; water contribution comparatively field-invariant.
+
+![Figure 8 — data-level coupling analyses](../figures/fig8_seed_data_coupling.png)
+
+**Fig. 8 — Data-level coupling analyses** with ground-truth labels only (Section VI-E). (a) PFC–CP PLV contrast between high-arousal (fear, happy) and low-arousal (neutral, sad) classes by band, over eight folds: beta +0.0109, t(7)=3.94, p=0.0056; delta +0.0074, p=0.065; other bands n.s. (b) Whole-matrix mean PLV by class: 0.4422 / 0.4426 / 0.4433 / 0.4399, all pairwise p > 0.3.
 
 Supplementary figures (Section VI-F, analysis details): ../figures/fig2_watercycle_detail.png (water-cycle block detail), ../figures/fig3_mutual_society.png (mutual-society block detail), ../figures/fig4_results_heatmap.png (per-arm result heatmap), ../figures/fig5_ablation_analysis.png (ablation comparison), ../figures/fig6_convergence_gates.png (reflux convergence and gate statistics). Three-dimensional renderings of the architecture are provided in ../figures/fig1_3d_architecture.png, ../figures/fig2_3d_watercycle.png, and ../figures/fig3_3d_mutual.png.
 
@@ -490,7 +494,7 @@ Supplementary figures (Section VI-F, analysis details): ../figures/fig2_watercyc
 
 [5] Y. Bai, C. Jiang, J. Hu, and Y. Li, "Network coupling characteristics of emotional processing based on weighted phase lag index," in *Proc. IEEE EMBC*, 2025, doi: 10.1109/EMBC58623.2025.11253529.
 
-[6] W.-L. Zheng and B.-L. Lu, "Investigating critical frequency bands and channels for EEG-based emotion recognition with deep neural networks," *IEEE Trans. Auton. Mental Develop.*, vol. 7, no. 3, pp. 162–175, 2015.
+[6] W.-L. Zheng and B.-L. Lu, "Identifying stable patterns over time for emotion recognition from EEG," *IEEE Trans. Affective Comput.*, vol. 10, no. 3, pp. 417–429, 2019.
 
 [7] R. Chen, C. Xie, J. Zhang, Q. You, and J. Pan, "Progressive multimodal domain adaptation for EEG emotion recognition," *IEEE Trans. Neural Syst. Rehabil. Eng.*, vol. 33, pp. 3498–3510, 2025, doi: 10.1109/TNSRE.2025.3603190.
 
