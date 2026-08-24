@@ -27,7 +27,7 @@ DAME 的两个机制各带一条可以直接检验的约束。水循环模块把
 
 本文下两个赌注：一个表示赌注、一个方法论赌注。表示赌注是网络假说（H1）。功能成像与连接研究一致表明，情绪状态会重组大规模网络：默认模式网络（DMN）与感觉区、额区之间的相位关系随情绪改变，且这种改变按唤醒度与效价分级 [1,2,3,4,5]。如果这一描述成立，情绪解码器就应当消费脑区之间的耦合，而不是电极级活动。H1 给出三条可以在任何模型训练之前用数据检验的预测，第 VI-E 节只用真实标签检验它们，失败与成功一并报告。方法论赌注是：机制必须可证伪。DAME 的每个组件都绑定一条专属损失和一个诊断探针；两个未通过探针的组件——稳定性预测头与场路由器——记录在附录中作为证伪记录，而不是被埋掉。
 
-文献格局决定了协议的选择。近年强 UDA 系统在目标被试参与训练的条件下报告 SEED-IV 精度 72.6–82.8%：PMDA [7]、MCTL-SLAC [8]、DDSPR [9] 与由粗到细域适应 [10]。在更严格的直接迁移协议下，已发表记录很薄，且直接迁移数字很少附带任何推断统计；域泛化综述在方法论层面也指出同样的问题 [11]。我们因此先把协议固定下来：在七名被试的原始波形上训练、在第八名上测试，不做任何形式的适应，全部基线等预算。我们报告带折间重叠校正的配对显著性检验，外加置换参考与效应量。UDA 方法 DANN [12] 与 DeepCORAL [13] 按其直接迁移读法纳入基线，即训练期不接触任何目标数据；两种范式之间的差距明说，不掩盖。
+文献格局决定了协议的选择。近年强 UDA 系统在目标被试参与训练的条件下报告 SEED-IV 精度 72.6–88.2%：PMDA [7]、MCTL-SLAC [8]、DDSPR [9] 与由粗到细域适应 [10]。在更严格的直接迁移协议下，已发表记录很薄，且直接迁移数字很少附带任何推断统计；域泛化综述在方法论层面也指出同样的问题 [11]。我们因此先把协议固定下来：在七名被试的原始波形上训练、在第八名上测试，不做任何形式的适应，全部基线等预算。我们报告带折间重叠校正的配对显著性检验，外加置换参考与效应量。UDA 方法 DANN [12] 与 DeepCORAL [13] 按其直接迁移读法纳入基线，即训练期不接触任何目标数据；两种范式之间的差距明说，不掩盖。
 
 两条假说组织本文的设计。H1 如上。第二条是场条件机制定律（H2），回答协作式模块化机制在什么场里有用。把（训练，测试）对称为一个场。小差距场在同一大脑的不同会话上训练与测试；大差距场在不同大脑上训练与测试。H2：社会——众多脑区专家的重组——在小差距场中贡献为正，在大差距场中退化至零，因为专家特化是脑内属性。水循环作为一种压缩机制，在两场中都有贡献。H2 的大差距分支在跨会话实验设计之前就已在机制级消融中可见，小差距分支来自第 VI-D 节的新数据。其形式化版本是命题 1（第 V-D 节）。
 
@@ -37,9 +37,9 @@ DAME 的两个机制各带一条可以直接检验的约束。水循环模块把
 
 # II. 相关工作
 
-**脑电情绪识别中的功能连接。** 从单通道特征到网络级拓扑的转变有充分文献支撑。锁相值 [27] 仍是成对相位耦合的标准度量，电极拓扑上的图神经网络是跨被试解码的常见架构 [16]，可解释性分析确认前额与顶叶区域的注意力与情绪调节文献一致 [4,5]。近期一项 EMBC 研究在 SEED-IV 上测量加权相位滞后指数（wPLI），发现正性情绪下 θ/α 频段的 DMN 同步，以及视觉网络的 θ 参与 [5]。本文第 VI-E 节用 PLV 考察同一现象，能复现的发现与不能复现的一并报告。本文的增量是工程这一步：整条流水线（带通、Hilbert 相位、PLV、分类器）可微、端到端训练，耦合表示由消融检验而不是想当然。
+**脑电情绪识别中的功能连接。** 从单通道特征到网络级拓扑的转变有充分文献支撑。锁相值 [27] 仍是成对相位耦合的标准度量，电极拓扑上的图神经网络是跨被试解码的常见架构 [16]，可解释性分析确认前额与顶叶区域的注意力与情绪调节文献一致 [4,5]。近期一项 EMBC 研究在 VR 诱发情绪的 EEG（42 名被试）上测量加权相位滞后指数（wPLI），发现正性情绪下 θ/α 频段的 DMN 同步，以及视觉网络的 θ 参与 [5]。本文第 VI-E 节用 PLV 考察同一现象，能复现的发现与不能复现的一并报告。本文的增量是工程这一步：整条流水线（带通、Hilbert 相位、PLV、分类器）可微、端到端训练，耦合表示由消融检验而不是想当然。
 
-**直接迁移与无监督域适应。** EEGNet [14] 与 TSception [15] 这类紧凑卷积设计带来高效的时空提取。DGCNN [16] 这类图方法把电极建模成带动态邻接的节点。EEG Conformer [17] 与 LMDA-Net [18] 这类注意力与 Transformer 变体把卷积与自注意处理结合。对抗式与相关性适应（DANN [12]、DeepCORAL [13]）对齐源与目标分布。较新的系统 PMDA [7]、MCTL-SLAC [8]、DDSPR [9] 与由粗到细方法 [10] 把 SEED-IV 推到 72–83% 区间，但它们全都在训练期消耗目标数据。两个观察促使我们做出不同选择。这些数字并不界定直接迁移的上限。适应机制本身还消耗容量：在我们的协议下 DANN 与 DeepCORAL 低于普通卷积基线（第 VI-B 节）。域泛化研究在综述层面得出同样的教训：当目标从不参与训练时，有用的工作是表示选择与按设计的不变性 [11]。
+**直接迁移与无监督域适应。** EEGNet [14] 与 TSception [15] 这类紧凑卷积设计带来高效的时空提取。DGCNN [16] 这类图方法把电极建模成带动态邻接的节点。EEG Conformer [17] 与 LMDA-Net [18] 这类注意力与 Transformer 变体把卷积与自注意处理结合。对抗式与相关性适应（DANN [12]、DeepCORAL [13]）对齐源与目标分布。较新的系统 PMDA [7]、MCTL-SLAC [8]、DDSPR [9] 与由粗到细方法 [10] 把 SEED-IV 推到 72–88% 区间，但它们全都在训练期消耗目标数据。两个观察促使我们做出不同选择。这些数字并不界定直接迁移的上限。适应机制本身还消耗容量：在我们的协议下 DANN 与 DeepCORAL 低于普通卷积基线（第 VI-B 节）。域泛化研究在综述层面得出同样的教训：当目标从不参与训练时，有用的工作是表示选择与按设计的不变性 [11]。
 
 **隐式深度模型。** 深度均衡模型（DEQ）[20] 把前向传播视为非线性映射的不动点，经隐函数定理微分。单调算子网络保证唯一性 [21]，免雅可比反传避开求解线性系统 [22]。液态时间常数网络把深度松弛为极限过程并获得可证稳定性 [19]。DAME 的水循环属于这一族，但做出不同的取舍：前向迭代截断到少数几步并带显式收缩，因此反传是普通反传，截断误差有闭式界（命题 3）。简化的代价是表达力；实验显示在此数据规模下该代价可接受。
 
@@ -402,7 +402,7 @@ H2 在数据之前重述。小差距场在同一大脑的不同会话上训练�
 
 **跨模态证据（NLP）。** 同一 DAME 架构配轻量文本编码器，在 ChnSentiCorp 中文情感分类（3 领域，留一领域外，3 种子）上评估：最佳 78.5%，回流消融贡献 +2.08 个百分点。机制族跨模态迁移，说明这些机制是模态无关构件，而非脑电特化启发式；详细数字属于姊妹报告。
 
-**定位。** 与 UDA 系统（72.6–82.8% [7]–[10]）相比，我们的直接迁移数字刻意不做比较：两种协议在模型可接触的信息上不同。在直接迁移范式内，DAME-C5 领先七个同协议基线，其耦合表示在三轮独立验证中贡献 +3.3 至 +3.7 个百分点，统计面板带校正报告而非一颗星号。本文的贡献在于耦合原生架构的可证适定性、场条件定律与不可能性结果，而非头条精度数字。
+**定位。** 与 UDA 系统（72.6–88.2% [7]–[10]）相比，我们的直接迁移数字刻意不做比较：两种协议在模型可接触的信息上不同。在直接迁移范式内，DAME-C5 领先七个同协议基线，其耦合表示在三轮独立验证中贡献 +3.3 至 +3.7 个百分点，统计面板带校正报告而非一颗星号。本文的贡献在于耦合原生架构的可证适定性、场条件定律与不可能性结果，而非头条精度数字。
 
 **局限，如实声明。** (i) 快速协议规模：8 被试基线用 1 种子；基线跨折 sd ±2.4–5.6 个百分点反映小队列。(ii) 跨会话实验汇总六名被试，其置换下限 0.25 使 p 值是指示性的而非决定性的。(iii) 稳定性头精度信号已被证伪为多数类伪影；其修复协议（均衡配对、逐折记录、均衡精度）在附录 D 中指定，待确认性运行执行。(iv) 报告运行未逐轮记录训练后收缩常数；结构保证成立，监控为确认性运行固定。(v) κ̂ 是暂定的单探针代入值。(vi) 第 VI-E 节的伪迹审计目前只有快速版（n = 4，ICA + ICLabel），耦合对比在清洗后存活；全量 15 被试审计与仅带通对照臂待执行，若耦合效应在更大规模下经不起伪迹剔除，神经科学论断仍将被撤回而不是辩护。(vii) 模型只在一个数据集、一套情绪分类、一套采集系统上评估，社会的社区结构在此规模下不携带任何论断。
 
@@ -494,17 +494,17 @@ Self 与 Stab 仅为历史记录：融合预测头已被证伪并退役（附录
 
 [4] N. Kohn, S. B. Eickhoff, M. Scheller, A. R. Laird, P. T. Fox, and U. Habel, "Neural network of cognitive emotion regulation: An ALE meta-analysis and MACM analysis," *NeuroImage*, vol. 87, pp. 345–355, 2014.
 
-[5] Y. Bai, C. Jiang, J. Hu, and Y. Li, "Network coupling characteristics of emotional processing based on weighted phase lag index," in *Proc. IEEE EMBC*, 2025, doi: 10.1109/EMBC58623.2025.11253529.
+[5] Y. Bai, C. Jiang, J. Hu, and Y. Li, "Emotion processing in virtual reality: EEG functional connectivity using weighted phase lag index," in *Proc. 47th Annu. Int. Conf. IEEE Eng. Med. Biol. Soc. (EMBC)*, 2025, pp. 1–4, doi: 10.1109/EMBC58623.2025.11253529.
 
 [6] W.-L. Zheng and B.-L. Lu, "Identifying stable patterns over time for emotion recognition from EEG," *IEEE Trans. Affective Comput.*, vol. 10, no. 3, pp. 417–429, 2019.
 
-[7] R. Chen, C. Xie, J. Zhang, Q. You, and J. Pan, "Progressive multimodal domain adaptation for EEG emotion recognition," *IEEE Trans. Neural Syst. Rehabil. Eng.*, vol. 33, pp. 3498–3510, 2025, doi: 10.1109/TNSRE.2025.3603190.
+[7] R. Chen, C. Xie, J. Zhang, Q. You, and J. Pan, "A progressive multi-domain adaptation network with reinforced self-constructed graphs for cross-subject EEG-based emotion and consciousness recognition," *IEEE Trans. Neural Syst. Rehabil. Eng.*, vol. 33, pp. 3498–3510, 2025, doi: 10.1109/TNSRE.2025.3603190.
 
 [8] L. Zhu, M. Xu, A. Huang, J. Zhang, and X. Tan, "Multiple class transfer learning framework with source label adaptive correction for EEG emotion recognition," *Biomed. Signal Process. Control*, vol. 104, art. 107536, 2025.
 
-[9] Q. Hai, L. Yang, Y. Ye, Q. Wang, J. Du, and H. He, "DDSPR: Dynamic domain selection and pseudo-label refinement for cross-subject EEG-based emotion recognition," in *Proc. Annu. Meeting Cognitive Science Society (CogSci)*, 2025.
+[9] Q. Hai, L. Yang, Y. Ye, Q. Wang, J. Du, and H. He, "DDSPR: Dynamic domain selection and pseudo-label refinement for cross-subject EEG-based emotion recognition," in *Proc. Annu. Meeting Cognitive Science Society (CogSci)*, vol. 47, 2025.
 
-[10] S. Ran, W. Zhong, F. Hu, L. Ye, and Q. Zhang, "Coarse-to-fine domain adaptation for cross-subject EEG emotion recognition with contrastive learning," in *Proc. Chinese Conf. Pattern Recognition and Computer Vision (PRCV)*, Lecture Notes in Computer Science, vol. 15045, pp. 406–419, 2025.
+[10] S. Ran, W. Zhong, F. Hu, L. Ye, and Q. Zhang, "Coarse-to-fine domain adaptation for cross-subject EEG emotion recognition with contrastive learning," in *Proc. 7th Chinese Conf. Pattern Recognition and Computer Vision (PRCV 2024)*, Lecture Notes in Computer Science, vol. 15045, pp. 406–419, Springer, 2025, doi: 10.1007/978-981-97-8499-8_28.
 
 [11] J. Wang, C. Lan, C. Liu, Y. Ouyang, T. Qin, W. Lu, Y. Chen, W. Zeng, and P. S. Yu, "Generalizing to unseen domains: A survey on domain generalization," *IEEE Trans. Knowl. Data Eng.*, vol. 35, no. 8, pp. 8052–8072, 2023.
 
@@ -551,9 +551,3 @@ Self 与 Stab 仅为历史记录：融合预测头已被证伪并退役（附录
 [32] G. W. Snedecor and W. G. Cochran, *Statistical Methods*, 8th ed., Iowa State University Press, 1989.
 
 [33] J. A. Urigüen and B. Garcia-Zapirain, "EEG artifact removal: State-of-the-art and guidelines," *J. Neural Eng.*, vol. 12, no. 3, art. 031001, 2015.
-
----
-
-**修订说明（中文版保留）。** 本次与英文版同步修订：架构全称更新为 DAME（去中心化类水互助本质导向架构，Decentralized Aqua-like Mutual Essential-Oriented Architecture），摘要改为三段式并补充关键公式的"用人话说"注释。一处无法核实的引用已从正文与参考文献中移除。原条目按未完成标注保留如下备查，待核实后决定是否恢复：Suo and Li, "Protocol evaluation of direct-transfer EEG emotion decoding," preprint, 2026（详情待核）。另，伪迹剔除快速审计（n = 4，ICA + ICLabel）已完成，结果写入第 VI-E 节、局限（vi）与未来工作（4）。
-
-**2026-08-24 核对修订（与英文版同步）**：① 第 VI-D 节 F 统计量按精确数据修正（F(7,7) = 1.37 → 1.39，p ≈ 0.69 → 0.67；结论不变）；② 参考文献 [6] 换为 SEED-IV 数据集的真正出处（Zheng & Lu, IEEE TAC 10(3):417–429, 2019；原条目引的是 2015 年旧 SEED 三分类论文）；③ 附录 C 门控描述与正文 IV-C 节对齐（边模式-策略余弦门控）；④ 命题 3 补入两项此前遗漏的同阶项：直接参数梯度项（C₁ = L_J(D̄+1)）与雅可比点误差×B̄ 的 T² 交叉项（新增 C₄ = ½ȲB̄L_B），并修正证明概要中传播因子的表述；⑤ 图 7/图 8 嵌入正文（此前为裸路径文本）；⑥ 训练时长按日志修正（"约 3.5 分钟"→ 66–79 秒训练 + 约 70 秒数据准备）；⑦ KL 权重为可学习对数尺度的说明与正文"全部权重固定"对齐；⑧ Fano 不等式归属移除（H(S|Z)=H(S) 直接由不变性条件得出）。

@@ -1,0 +1,22 @@
+===== REF 1 : DOI:10.1006/nimg.2002.1087
+{"error":"Paper with id DOI:10.1006/nimg.2002.1087&fields=title,authors,year,venue,externalIds,openAccessPdf,isOpenAccess not found"}
+
+===== REF 2 : DOI:10.1146/annurev-neuro-071013-014030
+{"error":"Paper with id DOI:10.1146/annurev-neuro-071013-014030&fields=title,authors,year,venue,externalIds,openAccessPdf,isOpenAccess not found"}
+
+===== REF 3 : DOI:10.1016/j.compbiomed.2011.06.020
+{"error":"Paper with id DOI:10.1016/j.compbiomed.2011.06.020&fields=title,authors,year,venue,externalIds,openAccessPdf,isOpenAccess not found"}
+
+===== REF 4 : DOI:10.1016/j.neuroimage.2013.11.001
+{"error":"Paper with id DOI:10.1016/j.neuroimage.2013.11.001&fields=title,authors,year,venue,externalIds,openAccessPdf,isOpenAccess not found"}
+
+===== REF 5 : DOI:10.1109/EMBC58623.2025.11253529
+{"error":"Paper with id DOI:10.1109/EMBC58623.2025.11253529&fields=title,authors,year,venue,externalIds,openAccessPdf,isOpenAccess not found"}
+
+===== REF 6 : DOI:10.1109/TAFFC.2018.2824988
+{"error":"Paper with id DOI:10.1109/TAFFC.2018.2824988&fields=title,authors,year,venue,externalIds,openAccessPdf,isOpenAccess not found"}
+
+===== REF 7 : DOI:10.1109/TNSRE.2025.3603190
+{"error":"Paper with id DOI:10.1109/TNSRE.2025.3603190&fields=title,authors,year,venue,externalIds,openAccessPdf,isOpenAccess not found"}
+
+===== REF 8 : DOI:10.1016/j.bspc.2025.107536
